@@ -2,6 +2,7 @@ import paramiko
 import socket
 import tkinter as tk
 import tkinter.filedialog as tkft
+import subprocess
 import sys
 import time
 import os
@@ -40,8 +41,31 @@ class UserInterface(tk.Tk):
         self.passwordEntry.grid(row=4, column=2)
         self.status.grid(row=1, column=1)
 
+        ## Raspberry Pi IP Print
+
+        ## LOOK FOR RASPBERRY PI Address on Windows, and then MAC ##
+    
+        raspiIPWindows = subprocess.getoutput('arp -a | findstr b8-27-eb')
+        raspiIPMac = subprocess.getoutput('arp -na | grep -i b8:27:eb')
+        
+        raspiIPMac = str(raspiIPMac)
+        raspiIPWindows = str(raspiIPWindows)
+
+        if raspiIPMac == '':
+            raspiIPMac = 'Not Found'
+        if raspiIPWindows == '/bin/sh: findstr: command not found':
+            raspiIPWindows = '10.0.0.1 to 10.0.0.9'
+
+        labelString = 'Potential Host Address: ' + raspiIPWindows + ' OR ' + raspiIPMac
+
+        ## Print Address to GUI
+        self.potentialIP = tk.Message(self, text=labelString, font=('Courier', 10))
+        self.potentialIP.config(width = 250)
+        self.potentialIP.grid(row = 6, column= 1)
+
     def fileTransferState(self):
 
+        ## List and destroy previous UI grid.
         list = self.grid_slaves()
 
         for i in list:
@@ -71,7 +95,10 @@ class UserInterface(tk.Tk):
         # POSITIONING (TRANSFER STATE)
         self.sendFileOption.pack()
 
+    ## User credentials entry + SSH connection
     def sshConnect(self):
+
+
 
         self.username = self.usernameEntry.get()
         self.password = self.passwordEntry.get()
@@ -108,6 +135,7 @@ class UserInterface(tk.Tk):
             self.ssh_client.close()
             return
 
+    ## Convert SSH to SFTP
     def sftpConnect(self):
         try:
             self.sftp_client = self.ssh_client.open_sftp()
@@ -117,6 +145,7 @@ class UserInterface(tk.Tk):
         except socket.error:
             self.sftp_client.close()
 
+    ## Select file in File Browser
     def chooseFile(self):
         self.file = tkft.askopenfile(parent=self)
         print(str(self.file))
@@ -130,13 +159,12 @@ class UserInterface(tk.Tk):
         self.video.pack()
         self.picture.pack()
 
+    ## Finalize and PUT file.
     def sendFile(self, string):
         
         remoteDir = "/home/pi/" + string + '/' + self.fileName
         print(remoteDir)
 
-        
-        
         try:           
             self.sftp_client.put(self.fileDir, remoteDir)
             self.transfer.destroy()
