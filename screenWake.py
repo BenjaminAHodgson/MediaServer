@@ -68,8 +68,9 @@ def distance():
 
 
  
-def main():
+def main(minDist):
     try:
+        # Initialize: Screen-Off
         global afk
         afk = 1
         subprocess.call('XAUTHORITY=~pi/.Xauthority DISPLAY=:0 xset dpms force off', shell=True)
@@ -78,13 +79,15 @@ def main():
         timeUp = 0
         
         while True:
-            
-            
+
             if screenActive is False:
                 dist = distance()
             elif screenActive is True:
-                dist = 40
+                ## Disable checks on distance.
+                dist = minDist
+                ## Iterate timer
                 timeUp = checkTimer(timeUp)
+                ## If it has been 5 hours
                 if timeUp is -1:
                     checkAFK = tkinter.Tk()
                     checkAFK.title("AFK")
@@ -92,20 +95,21 @@ def main():
                     checkAFK.button = tkinter.Button(text='Are you there?', command=lambda: notAFK(checkAFK, timeUp), padx=100, pady=100)
                     checkAFK.button.pack()
                     if afk == 1:
-                        subprocess.call('sudo XAUTHORITY=~pi/.Xauthority DISPLAY=:0 xset dpms force off', shell=True)
+                        subprocess.call('XAUTHORITY=~pi/.Xauthority DISPLAY=:0 xset dpms force off', shell=True)
                         screenActive = False
                     
                 
-            
-            if dist < 40 and screenActive is False:
+            ## Three distance checks to eliminate false positives
+            if dist < minDist and screenActive is False:
                 time.sleep(0.25)
                 dist = distance()
                 
-                if dist < 40:
+                if dist < minDist:
                     time.sleep(0.25)
                     dist = distance()
                     
-                    if dist < 40:
+                    # Screen-On
+                    if dist < minDist:
                         subprocess.call('XAUTHORITY=~pi/.Xauthority DISPLAY=:0 xset dpms force on', shell=True)
                         print('Screen Active')
                         screenActive = True
@@ -116,14 +120,33 @@ def main():
             
                 
  
-        # Reset by pressing CTRL + C
+    # Reset by pressing CTRL + C
     except KeyboardInterrupt:
         print("Measurement stopped by User")
         GPIO.cleanup()
 
+def setDistWindow():
+    ## SelectDistance Window
+    selectDist = tkinter.Tk()
+    selectDist.minsize('100x100')
+    selectDist.dist = tkinter.Label(selectDist, text='Enter Minimum Distance: ')
+    selectDist.enterDist = tkinter.Entry(selectDist)
+    selectDist.done = tkinter.Button(selectDist, text='Done', command=lambda: setDist(selectDist))
+
+    ## Pack window
+    selectDist.dist.grid(row = 1, column = 1)
+    selectDist.enterDist.grid(row = 1, column = 1)
+
+def setDist(window):
+    global minDist
+    minDist = 40
+    minDist = window.enterDist.get()
+
+
 if __name__ == '__main__':
     print("Running...")
-    main()
+    setDistWindow()
+    main(minDist)
         
 
 
